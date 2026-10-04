@@ -7,6 +7,7 @@ import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 
 import * as Electron from "electron";
+import * as BackgroundTray from "../personal/backgroundTray.cjs";
 
 import { type DesktopSnapShotEvent, DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts";
 
@@ -651,7 +652,8 @@ export const make = Effect.gen(function* () {
       // released so its remaining repeats cannot reach the next app.
       concealWindow: () => concealPendingQuitWindow(window),
       quit: () => {
-        void runPromise(electronApp.quit);
+        if (environment.platform === "linux") BackgroundTray.conceal();
+        else void runPromise(electronApp.quit);
       },
     });
     window.webContents.on("before-input-event", (event, input) => {
@@ -674,6 +676,7 @@ export const make = Effect.gen(function* () {
     window.on("move", scheduleBoundsPersist);
     window.on("maximize", scheduleBoundsPersist);
     window.on("unmaximize", scheduleBoundsPersist);
+    BackgroundTray.attachMainWindow(window);
     window.on("close", () => {
       runFork(flushBoundsPersist);
     });

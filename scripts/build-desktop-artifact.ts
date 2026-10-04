@@ -2664,6 +2664,15 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       ...DESKTOP_EXTRA_RESOURCES,
       ...(platform === "linux" ? LINUX_CAPTURE_EXTRA_RESOURCES : []),
       ...(platform === "linux" ? LINUX_BROWSER_SECRET_EXTRA_RESOURCES : []),
+      ...(platform === "linux"
+        ? [
+            {
+              from: "apps/desktop/resources/personal",
+              to: "personal",
+              filter: ["codex-switcher.py"],
+            },
+          ]
+        : []),
       ...(platform === "win" ? WINDOWS_SERVER_EXTRA_RESOURCES : []),
       ...(platform === "win" && wslRuntimeBundled ? WSL_RUNTIME_EXTRA_RESOURCES : []),
     ],
@@ -2744,7 +2753,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       category: "Development",
       synopsis: "Desktop GUI for coding agents",
       // Required by the .deb control file.
-      maintainer: "T3 Tools <hello@t3.codes>",
+      maintainer: "ghostarun <taruneswar007@gmail.com>",
       // electron-builder turns these into MimeType=x-scheme-handler/<scheme>;
       // in the .desktop entry (Exec already gets %U), so browsers can hand
       // t3code:// OAuth callbacks to the app.
@@ -2775,6 +2784,8 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
         "libxss1",
         "libxtst6",
         "xdg-utils",
+        "python3",
+        "xdotool",
       ],
     };
   }

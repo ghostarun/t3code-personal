@@ -5,6 +5,7 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 
 import type * as Electron from "electron";
+import * as BackgroundTray from "../personal/backgroundTray.cjs";
 
 import { makeComponentLogger } from "../app/DesktopObservability.ts";
 import * as ElectronApp from "../electron/ElectronApp.ts";
@@ -196,7 +197,9 @@ export const make = Effect.gen(function* () {
                 },
                 { type: "separator" as const },
               ]),
-          { role: environment.platform === "darwin" ? "close" : "quit" },
+          environment.platform === "linux"
+            ? { label: "Hide T3 Code", click: BackgroundTray.conceal }
+            : { role: environment.platform === "darwin" ? "close" : "quit" },
         ],
       },
       {

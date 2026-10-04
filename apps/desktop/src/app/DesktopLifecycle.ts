@@ -6,6 +6,7 @@ import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 
 import type * as Electron from "electron";
+import * as BackgroundTray from "../personal/backgroundTray.cjs";
 
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import { makeComponentLogger } from "./DesktopObservability.ts";
@@ -102,6 +103,7 @@ function handleBeforeQuit(
   allowQuit: () => boolean,
   markQuitAllowed: () => void,
 ): void {
+  BackgroundTray.allowQuit();
   if (allowQuit()) {
     void runEffect(
       Effect.gen(function* () {

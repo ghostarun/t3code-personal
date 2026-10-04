@@ -1,4 +1,7 @@
 import * as Cause from "effect/Cause";
+import * as Path from "effect/Path";
+import * as BackgroundTray from "../personal/backgroundTray.cjs";
+import * as DesktopAssets from "./DesktopAssets.ts";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -323,6 +326,19 @@ const startup = Effect.gen(function* () {
     });
   }
   yield* appIdentity.configure;
+  const assets = yield* DesktopAssets.DesktopAssets;
+  const icons = yield* assets.iconPaths;
+  const path = yield* Path.Path;
+  yield* Effect.promise(() =>
+    BackgroundTray.initialize({
+      platform: environment.platform,
+      baseDir: environment.baseDir,
+      iconPath: Option.getOrUndefined(icons.png),
+      switcherHelper: environment.isPackaged
+        ? path.join(process.resourcesPath, "personal", "codex-switcher.py")
+        : path.join(environment.appRoot, "apps/desktop/resources/personal/codex-switcher.py"),
+    }),
+  );
   yield* applicationMenu.configure;
   yield* updates.configure;
   yield* DesktopRemoteUpdates.listen;

@@ -6,7 +6,7 @@ for (const stream of [process.stdout, process.stderr]) {
 }
 
 import * as NodeHttpClient from "@effect/platform-node/NodeHttpClient";
-import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
+import * as Cause from "effect/Cause";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as NodeOS from "node:os";
 import * as Effect from "effect/Effect";
@@ -98,7 +98,10 @@ const resolveDesktopSshCliRunner = (
       nodeEngineRange: serverPackageJson.engines.node,
     };
   }
-  return { archiveVersion: environment.appVersion };
+  return {
+    archiveVersion: environment.appVersion,
+    releaseBaseUrl: "https://github.com/ghostarun/t3code-personal/releases/download",
+  };
 };
 
 const desktopSshEnvironmentLayer = Layer.unwrap(
@@ -227,4 +230,12 @@ const desktopRuntimeLayer = desktopClerkLayer.pipe(
   Layer.provideMerge(DesktopPreReadyPlatform.layer),
 );
 
-DesktopApp.program.pipe(Effect.provide(desktopRuntimeLayer), NodeRuntime.runMain);
+// DesktopLifecycle owns signal handling and waits for backend teardown.
+// The generic Node runner would interrupt that same runtime before teardown finishes.
+const desktopFiber = DesktopApp.program.pipe(Effect.provide(desktopRuntimeLayer), Effect.runFork);
+desktopFiber.addObserver((exit) => {
+  if (exit._tag === "Failure") {
+    Effect.runSync(Effect.logError(Cause.pretty(exit.cause)));
+    Electron.app.exit(1);
+  }
+});
