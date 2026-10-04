@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tempfile
 from install import sha256
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,9 +53,13 @@ def main():
         # Node 26 is needed only by SEA; the normal desktop build uses Node 24.
         run('vp', 'env', 'exec', '--node', '26.8.2', 'node',
             'apps/server/scripts/cli.ts', 'build-exe', '--target', 'linux-x64', '--verbose')
-        run('node', 'scripts/build-cli-archive.ts', '--platform', 'linux', '--arch',
-            'x64', '--version', version, '--output-dir', str(output),
-            '--resource-monitor-dir', str(ROOT / 'apps/desktop/prod-resources/resource-monitor'))
+        with tempfile.TemporaryDirectory(prefix='t3-personal-monitor-') as temporary:
+            monitor = Path(temporary)
+            shutil.copy2(ROOT / 'native/resource-monitor/target/x86_64-unknown-linux-gnu/release/t3-resource-monitor',
+                         monitor / 't3-resource-monitor')
+            run('node', 'scripts/build-cli-archive.ts', '--platform', 'linux', '--arch',
+                'x64', '--version', version, '--output-dir', str(output),
+                '--resource-monitor-dir', str(monitor))
     finally:
         for file, original in originals.items():
             file.write_bytes(original)
@@ -62,6 +67,7 @@ def main():
         ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()}
     (output / 'release.json').write_text(json.dumps(metadata, indent=2) + '\n')
     shutil.copy2(ROOT / 'personal/install.py', output / 'install.py')
+    (output / 'builder-debug.yml').unlink(missing_ok=True)
     files = sorted(p for p in output.iterdir() if p.is_file() and not p.name.endswith('.blockmap'))
     (output / 'SHA256SUMS').write_text(''.join(
         f'{sha256(file)}  {file.name}\n'

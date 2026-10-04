@@ -60,7 +60,7 @@ class InstallerTests(unittest.TestCase):
             install.activate('0.0.4501')
 
         def download(url, target):
-            target.write_text('0' * 64 + '  T3-Code-0.0.4502-x64.AppImage\n'
+            target.write_text('0' * 64 + '  T3-Code-0.0.4502-x86_64.AppImage\n'
                               if url.endswith('SHA256SUMS') else 'tampered executable')
 
         with patch.object(install, 'download', download), patch.object(install.subprocess, 'run') as run:

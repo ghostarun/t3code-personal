@@ -107,7 +107,7 @@ def install(version=None):
             stage = Path(temporary)
             base = f'https://github.com/{REPOSITORY}/releases/download/v{version}'
             download(base + '/SHA256SUMS', stage / 'SHA256SUMS')
-            archive = stage / f'T3-Code-{version}-x64.AppImage'
+            archive = stage / f'T3-Code-{version}-x86_64.AppImage'
             checksums = dict((line.split('  ', 1)[1], line.split('  ', 1)[0])
                              for line in (stage / 'SHA256SUMS').read_text().splitlines())
             download(base + '/' + archive.name, archive)
