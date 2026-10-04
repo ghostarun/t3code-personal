@@ -1,0 +1,59 @@
+name: Personal Linux Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: personal-linux-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'ghostarun/t3code-personal' && github.ref == 'refs/heads/personal'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libsecret-1-dev imagemagick python3 xdotool
+          rustup toolchain install stable --profile minimal
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version-file: package.json
+          cache: true
+          run-install: |
+            args:
+              - --filter=@t3tools/desktop...
+              - --filter=t3...
+              - --filter=@t3tools/scripts...
+              - --filter=@t3tools/oxlint-plugin-t3code...
+              - --frozen-lockfile
+      - name: Check personal changes
+        run: bash personal/check.sh
+      - name: Build desktop and matching SSH CLI
+        run: python3 personal/build.py
+      - name: Validate the packaged version
+        run: |
+          version=$(python3 personal/build.py --version-only)
+          tar -xzf "release-personal/t3-${version}-linux-x64.tar.gz" -C /tmp
+          "/tmp/t3-${version}-linux-x64/t3" --version
+          cd release-personal
+          sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: personal-linux
+          path: release-personal/
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 personal/build.py --version-only)
+          base=$(python3 -c 'import json; print(json.load(open("personal/release.json"))["upstreamTag"])')
+          gh release create "v${version}" release-personal/* --target "$GITHUB_SHA" --latest --title "T3 Code Personal ${version}" --notes "Official base: ${base}. Linux tray, close to background, codex-switcher startup and status. Install/update instructions: https://github.com/ghostarun/t3code-personal/blob/personal/docs/operations/personal-linux.md"

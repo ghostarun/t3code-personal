@@ -15,6 +15,8 @@ build/
 .logs/
 release/
 release-mock/
+release-personal/
+__pycache__/
 .t3
 .idea/
 apps/web/.playwright
