@@ -142,7 +142,7 @@ def install(version=None):
             shutil.copy2(entry, STATE / name)
         entry.write_text('[Desktop Entry]\nType=Application\nName=T3 Code Personal\n'
                          f'Exec="{launcher}" %U\nTerminal=false\nCategories=Development;\n'
-                         f'Icon={ROOT}/current/squashfs-root/t3-code.png\n'
+                         f'Icon={ROOT}/current/squashfs-root/t3code.png\n'
                          'StartupWMClass=t3code\nMimeType=x-scheme-handler/t3code;\n')
     subprocess.run(['update-desktop-database', str(applications)], check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

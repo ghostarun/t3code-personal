@@ -1,5 +1,6 @@
 import contextlib
 import io
+import hashlib
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -76,6 +77,38 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(versions, ['0.0.4501', '0.0.4502', '0.0.4601'])
         with self.assertRaises(ValueError):
             build.release_version({'upstreamTag': 'v0.0.45', 'revision': 100})
+
+    def test_verified_install_extracts_and_creates_portable_desktop_launcher(self):
+        archive = b'appimage fixture'
+        checksum = hashlib.sha256(archive).hexdigest()
+
+        def download(url, target):
+            if url.endswith('SHA256SUMS'):
+                target.write_text(checksum + '  T3-Code-0.0.4501-x86_64.AppImage\n')
+            else:
+                target.write_bytes(archive)
+
+        def command(arguments, **options):
+            if '--appimage-extract' in arguments:
+                contents = Path(options['cwd']) / 'squashfs-root'
+                contents.mkdir()
+                (contents / 'AppRun').write_text('fixture')
+                (contents / 't3code.png').write_bytes(b'icon')
+
+        script = self.home / 'share/install.py'
+        with patch.object(install, 'HOME', self.home), \
+             patch.object(install, 'BIN', self.home / 'bin'), \
+             patch.object(install, 'SCRIPT', script), \
+             patch.object(install, 'download', download), \
+             patch.object(install.subprocess, 'run', command), \
+             contextlib.redirect_stdout(io.StringIO()):
+            install.install('0.0.4501')
+        entry = (self.home / '.local/share/applications/t3code.desktop').read_text()
+        icon = next(line.removeprefix('Icon=') for line in entry.splitlines() if line.startswith('Icon='))
+        self.assertTrue(Path(icon).is_file())
+        self.assertTrue(script.is_file())
+        self.assertIn(str(self.home / 'bin/t3code'), entry)
+        self.assertEqual(install.current_version(), '0.0.4501')
 
 
 if __name__ == '__main__':
