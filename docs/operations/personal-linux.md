@@ -76,6 +76,12 @@ package manifest versions after stamping release versions. Build from a clean
 checkout when publishing. Imported upstream workflows are disabled on this fork;
 keep them disabled when adding new upstream workflows.
 
+Personal releases enable T3 Connect using the four public identifiers in upstream
+`.env.example`. The build rejects partial overrides and verifies that the packaged
+desktop, web client, and bundled server include the configuration before publishing.
+For a different relay deployment, supply all four identifiers together through
+`.env`, `.env.local`, or environment variables. Account tokens stay on each PC.
+
 ## Incorporate official updates
 
 ```bash

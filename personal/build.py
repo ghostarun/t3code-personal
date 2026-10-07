@@ -39,7 +39,9 @@ def main():
     if output.exists() and any(output.iterdir()):
         raise SystemExit(f'Output directory must be empty: {output}')
     output.mkdir(parents=True, exist_ok=True)
-    environment = dict(os.environ, T3CODE_DESKTOP_UPDATE_REPOSITORY=metadata['repository'])
+    connect = json.loads(subprocess.check_output(
+        ['node', 'personal/public-config.ts'], cwd=ROOT, text=True))
+    environment = dict(os.environ, **connect, T3CODE_DESKTOP_UPDATE_REPOSITORY=metadata['repository'])
     originals = {ROOT / name: (ROOT / name).read_bytes() for name in MANIFESTS}
 
     def run(*command, extra=None):
@@ -63,7 +65,7 @@ def main():
     finally:
         for file, original in originals.items():
             file.write_bytes(original)
-    metadata |= {'version': version, 'sourceCommit': subprocess.check_output(
+    metadata |= {'connectPublicConfig': connect, 'version': version, 'sourceCommit': subprocess.check_output(
         ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()}
     (output / 'release.json').write_text(json.dumps(metadata, indent=2) + '\n')
     shutil.copy2(ROOT / 'personal/install.py', output / 'install.py')

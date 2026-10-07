@@ -44,6 +44,11 @@ jobs:
           version=$(python3 personal/build.py --version-only)
           tar -xzf "release-personal/t3-${version}-linux-x64.tar.gz" -C /tmp
           "/tmp/t3-${version}-linux-x64/t3" --version
+          mkdir /tmp/personal-desktop
+          cd /tmp/personal-desktop
+          "$GITHUB_WORKSPACE/release-personal/T3-Code-${version}-x86_64.AppImage" --appimage-extract >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          node scripts/verify-personal-connect.ts /tmp/personal-desktop/squashfs-root/resources/app.asar release-personal/release.json
           cd release-personal
           sha256sum -c SHA256SUMS
       - uses: actions/upload-artifact@v4
