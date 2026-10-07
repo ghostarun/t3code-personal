@@ -143,7 +143,8 @@ def install(version=None):
         entry.write_text('[Desktop Entry]\nType=Application\nName=T3 Code Personal\n'
                          f'Exec="{launcher}" %U\nTerminal=false\nCategories=Development;\n'
                          f'Icon={ROOT}/current/squashfs-root/t3code.png\n'
-                         'StartupWMClass=t3code\nMimeType=x-scheme-handler/t3code;\n')
+                         'StartupWMClass=t3code\nMimeType=x-scheme-handler/t3code;\n'
+                         + ('NoDisplay=true\n' if name == 'com.t3tools.T3Code.desktop' else ''))
     subprocess.run(['update-desktop-database', str(applications)], check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print(f'T3 Code Personal {version} installed. Start with {launcher}')
