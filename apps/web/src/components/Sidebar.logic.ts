@@ -154,20 +154,51 @@ export type SidebarListItem =
   | { readonly kind: "thread"; readonly key: string; readonly section: SidebarSection }
   | { readonly kind: "marker"; readonly marker: SidebarListMarker };
 
+export function buildSidebarListItems(
+  sections: Record<SidebarSection, readonly string[]>,
+  shelfCounts: { readonly snoozed: number; readonly settled: number },
+): SidebarListItem[] {
+  if (
+    Object.values(sections).every((keys) => keys.length === 0) &&
+    shelfCounts.snoozed + shelfCounts.settled === 0
+  )
+    return [];
+  const items: SidebarListItem[] = [];
+  const marker = (marker: SidebarListMarker) => items.push({ kind: "marker", marker });
+  const rows = (section: SidebarSection) => {
+    for (const key of sections[section]) items.push({ kind: "thread", key, section });
+  };
+  if (sections.working.length > 0) {
+    marker("working-header");
+    rows("working");
+  }
+  marker("pinned-header");
+  rows("pinned");
+  marker("pinned-divider");
+  marker("active-placeholder");
+  rows("active");
+  if (shelfCounts.snoozed > 0) {
+    marker("snoozed-header");
+    rows("snoozed");
+  }
+  marker("settled-header");
+  marker("settled-placeholder");
+  rows("settled");
+  return items;
+}
+
 export function sidebarListItemId(item: SidebarListItem): string {
   return item.kind === "thread" ? item.key : sidebarMarkerId(item.marker);
 }
 
-/** The section a slot belongs to, read off the markers around it: from
-    the top down, everything before the pinned divider is pinned, then the
-    inbox until the first shelf header, each shelf until the next header,
-    then settled. */
+/** The section a slot belongs to, read off the preceding section marker. */
 function sectionAtSidebarSlot(items: readonly SidebarListItem[], index: number): SidebarSection {
   let section: SidebarSection = "pinned";
   for (let i = 0; i < index && i < items.length; i += 1) {
     const item = items[i]!;
     if (item.kind !== "marker") continue;
-    if (item.marker === "pinned-divider") section = "active";
+    if (item.marker === "pinned-header") section = "pinned";
+    else if (item.marker === "pinned-divider") section = "active";
     else if (item.marker === "working-header") section = "working";
     else if (item.marker === "snoozed-header") section = "snoozed";
     else if (item.marker === "settled-header") section = "settled";
@@ -191,24 +222,30 @@ export function resolveSidebarDropTarget(
   const activeIndex = items.findIndex((item) => sidebarListItemId(item) === activeKey);
   const overIndex = items.findIndex((item) => sidebarListItemId(item) === overId);
   if (activeIndex === -1 || overIndex === -1 || items[activeIndex]?.kind !== "thread") return null;
+  const over = items[overIndex];
+  if (
+    items[activeIndex].section === "working" ||
+    (over?.kind === "marker" && over.marker === "working-header")
+  )
+    return null;
+  const insertionIndex =
+    overIndex + (over?.kind === "marker" && over.marker === "pinned-header" ? 1 : 0);
   const moved = items.filter((_, index) => index !== activeIndex);
-  moved.splice(overIndex, 0, items[activeIndex]!);
-  const section = sectionAtSidebarSlot(moved, overIndex);
+  moved.splice(insertionIndex, 0, items[activeIndex]!);
+  const section = sectionAtSidebarSlot(moved, insertionIndex);
   if (section === "working" || section === "snoozed") return null;
   const pinnedOrder: string[] = [];
   const activeOrder: string[] = [];
   let currentSection: SidebarSection = "pinned";
   for (const item of moved) {
     if (item.kind === "marker") {
-      if (item.marker === "pinned-divider") currentSection = "active";
-      else if (
-        item.marker === "working-header" ||
-        item.marker === "snoozed-header" ||
-        item.marker === "settled-header"
-      )
-        break;
+      if (item.marker === "pinned-header") currentSection = "pinned";
+      else if (item.marker === "pinned-divider") currentSection = "active";
+      else if (item.marker === "working-header") currentSection = "working";
+      else if (item.marker === "snoozed-header") currentSection = "snoozed";
+      else if (item.marker === "settled-header") currentSection = "settled";
     } else if (currentSection === "pinned") pinnedOrder.push(item.key);
-    else activeOrder.push(item.key);
+    else if (currentSection === "active") activeOrder.push(item.key);
   }
   return { section, pinnedOrder, activeOrder };
 }

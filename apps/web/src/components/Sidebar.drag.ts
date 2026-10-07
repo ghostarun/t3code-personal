@@ -62,9 +62,16 @@ export function createSidebarCollisionDetection(
       if (pointer.x >= boundary.left && pointer.x <= boundary.right) {
         if (pointer.y < previousY && pointer.y <= boundary.bottom) boundarySection = "pinned";
         else if (pointer.y > previousY && pointer.y >= boundary.top) boundarySection = "active";
-        const nextHeader = (["working-header", "snoozed-header", "settled-header"] as const)
+        const dividerIndex = items.findIndex(
+          (item) => item.kind === "marker" && item.marker === "pinned-divider",
+        );
+        const nextHeader = items
+          .slice(dividerIndex + 1)
+          .filter(isShelfHeader)
           .map((marker) =>
-            args.droppableContainers.find((container) => container.id === sidebarMarkerId(marker)),
+            args.droppableContainers.find(
+              (container) => container.id === sidebarListItemId(marker),
+            ),
           )
           .find((container) => container !== undefined);
         const activeBottom = nextHeader?.node.current?.getBoundingClientRect().top;
@@ -182,14 +189,14 @@ export function createSidebarSortingStrategy(input: {
       if (groups[name].length > 0) projected.push(...groups[name]);
       else marker(`${name}-placeholder`);
     };
-    marker("pinned-header");
-    projected.push(...groups.pinned);
-    marker("pinned-divider");
-    section("active");
     if (items.some((item) => item.kind === "marker" && item.marker === "working-header")) {
       marker("working-header");
       projected.push(...groups.working);
     }
+    marker("pinned-header");
+    projected.push(...groups.pinned);
+    marker("pinned-divider");
+    section("active");
     if (
       groups.snoozed.length > 0 ||
       ((active.section !== "snoozed" || (input.snoozedThreadCount ?? 0) > 1) &&
@@ -218,23 +225,41 @@ export function createSidebarSortingStrategy(input: {
             ? fallback
             : (rect?.height ?? fallback);
     });
-    const firstShelf = items.findIndex(isShelfHeader);
+    const firstShelf = items.findIndex(
+      (item) =>
+        item.kind === "marker" &&
+        (item.marker === "snoozed-header" || item.marker === "settled-header"),
+    );
     const shelfRect = rects[firstShelf];
     const beforeShelf = rects[firstShelf - 1];
     const lastRect = rects.at(-1);
+    // Draft rows are outside the sortable list, between Working and Pins.
+    // Preserve their measured space when projecting the draggable rows.
+    const pinnedHeaderIndex = indices.get(sidebarMarkerId("pinned-header")) ?? 0;
+    const pinsRect = rects[pinnedHeaderIndex];
+    const beforePins = rects[pinnedHeaderIndex - 1];
+    const draftSpace =
+      pinsRect && beforePins ? Math.max(0, pinsRect.top - beforePins.bottom - 1) : 0;
     // Consume the shelf's auto margin as drag labels and resized rows need
     // room, keeping the combined shelves at their measured bottom.
     let shelfSpace =
       shelfRect && beforeShelf && lastRect && shelfRect.top > beforeShelf.bottom + 1
         ? Math.max(
             0,
-            lastRect.bottom - rects[0].top - heights.reduce((sum, height) => sum + height + 1, -1),
+            lastRect.bottom -
+              rects[0].top -
+              draftSpace -
+              heights.reduce((sum, height) => sum + height + 1, -1),
           )
         : 0;
     const result = items.map(() => hidden);
     let top = rects[0].top;
     for (const [projectedIndex, item] of projected.entries()) {
-      if (isShelfHeader(item)) {
+      if (item.kind === "marker" && item.marker === "pinned-header") top += draftSpace;
+      if (
+        item.kind === "marker" &&
+        (item.marker === "snoozed-header" || item.marker === "settled-header")
+      ) {
         top += shelfSpace;
         shelfSpace = 0;
       }

@@ -8,6 +8,7 @@ import {
   archiveSelectedThreadEntries,
   buildBulkTitleRegenerationContextMenuItem,
   buildBulkUnpinContextMenuItem,
+  buildSidebarListItems,
   buildMultiSelectThreadContextMenuItems,
   createThreadJumpHintVisibilityController,
   deleteSelectedThreadEntries,
@@ -2463,6 +2464,40 @@ describe("navigation after parking a thread", () => {
 });
 
 describe("Working shelf (beta)", () => {
+  it("shows all working rows before pins and idle threads, even with parked shelves collapsed", () => {
+    const items = buildSidebarListItems(
+      { working: ["w1", "w2"], pinned: ["p1"], active: ["a1"], snoozed: [], settled: [] },
+      { snoozed: 1, settled: 2 },
+    );
+    expect(items[0]).toEqual({ kind: "marker", marker: "working-header" });
+    expect(items.filter((item) => item.kind === "thread").map((item) => item.key)).toEqual([
+      "w1",
+      "w2",
+      "p1",
+      "a1",
+    ]);
+    expect(resolveSidebarDropTarget(items, "a1", sidebarMarkerId("pinned-header"))).toEqual({
+      section: "pinned",
+      pinnedOrder: ["a1", "p1"],
+      activeOrder: [],
+    });
+  });
+
+  it("removes the Working header when the last worker returns to the inbox", () => {
+    const items = buildSidebarListItems(
+      { working: [], pinned: ["p1"], active: ["w1", "a1"], snoozed: [], settled: [] },
+      { snoozed: 0, settled: 0 },
+    );
+    expect(items.some((item) => item.kind === "marker" && item.marker === "working-header")).toBe(
+      false,
+    );
+    expect(items.filter((item) => item.kind === "thread").map((item) => item.key)).toEqual([
+      "p1",
+      "w1",
+      "a1",
+    ]);
+  });
+
   const session = {
     threadId: ThreadId.make("thread-1"),
     status: "running" as const,
@@ -2566,21 +2601,27 @@ describe("Working shelf (beta)", () => {
       key,
       section,
     });
-    // Pinned p1 | Active a1 a2 | Working w1 | Settled s1
+    // Working w1 | Pinned p1 | Active a1 a2 | Settled s1
     const items: readonly SidebarListItem[] = [
+      marker("working-header"),
+      row("w1", "working"),
       marker("pinned-header"),
       row("p1", "pinned"),
       marker("pinned-divider"),
       row("a1", "active"),
       row("a2", "active"),
-      marker("working-header"),
-      row("w1", "working"),
       marker("settled-header"),
       row("s1", "settled"),
     ];
 
     it("never drops into the Working shelf, and keeps it out of the inbox order", () => {
       expect(resolveSidebarDropTarget(items, "a1", "w1")).toBeNull();
+      expect(resolveSidebarDropTarget(items, "a1", sidebarMarkerId("working-header"))).toBeNull();
+      expect(resolveSidebarDropTarget(items, "a1", "p1")).toEqual({
+        section: "pinned",
+        pinnedOrder: ["a1", "p1"],
+        activeOrder: ["a2"],
+      });
       expect(resolveSidebarDropTarget(items, "p1", "a2")).toEqual({
         section: "active",
         pinnedOrder: [],
