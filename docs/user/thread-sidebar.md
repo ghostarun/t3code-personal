@@ -100,12 +100,12 @@ If dragging is unavailable for one environment, update the T3 Code server runnin
 environment. Pinned and active reordering require server support. Threads from older servers keep
 their default order until the server is updated.
 
-### Fold working threads (beta)
+### Keep working threads at the top (beta)
 
 On web and desktop, turn on **Settings → General → Working section (beta)** to move threads that
-are working or monitoring into a collapsed **Working** section at the bottom of the sidebar. A
-thread returns to the top of the active list when it finishes, fails, or needs an approval or
-answer. Pinned threads stay in the pinned section.
+are working or monitoring into an always-visible **Working** section at the top of the sidebar,
+above pinned and idle threads. A thread returns to the top of the active list when it finishes,
+fails, or needs an approval or answer. A pinned thread returns to its saved pinned position.
 
 While this is on, the active list is ordered by when each thread last came back to you, so you
 cannot drag to reorder it. Your saved order returns when you turn it off.
